@@ -1,6 +1,6 @@
 # Project Rules
 
-- Never create a component longer than 150 lines. If it exceeds this, split it into smaller components automatically.
+- Prefer components under 150 lines. If a component exceeds this, evaluate whether it contains distinct concerns (data fetching, sub-UI sections, reusable logic) and split at those natural boundaries. Always extract stateful logic into custom hooks. Don't split purely to meet a line count.
 - Always separate UI from logic.
 
 ---
