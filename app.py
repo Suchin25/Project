@@ -21,39 +21,47 @@ limiter = Limiter(
 
 client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
-SYSTEM_PROMPT = """You are an expert startup analyst with deep experience in venture capital,
-entrepreneurship, and business strategy. Analyze startup ideas objectively and thoroughly.
+SYSTEM_PROMPT = """You are an expert startup attorney and venture capital advisor with deep experience
+analyzing investment term sheets. Your role is to analyze term sheets and clearly explain their
+implications to founders — what each clause means, what is standard, and what to push back on.
 
 Always respond with valid JSON in exactly this structure:
 {
-  "summary": "Plain English explanation of what this startup does and why it could matter (2-3 paragraphs)",
-  "market": {
-    "size": "Estimated market size and growth rate",
-    "competitors": ["competitor1", "competitor2", "competitor3"],
-    "positioning": "How this startup differentiates from competitors",
-    "timing": "Why now? Is market timing good or bad?"
+  "summary": "Plain English overview of this term sheet: what type of deal it is, who the key parties are, headline economics, and your overall impression (2-3 paragraphs)",
+  "key_terms": {
+    "instrument": "Type of investment (e.g., Series A Preferred Stock, Post-Money SAFE, Convertible Note)",
+    "valuation": "Pre-money and post-money valuation, or cap for SAFEs/notes",
+    "investment_amount": "Total investment amount",
+    "liquidation_preference": "Liquidation preference multiple and type (participating vs non-participating)",
+    "anti_dilution": "Anti-dilution protection type (e.g., broad-based weighted average, full ratchet, none)",
+    "board_composition": "Board seat breakdown after the round",
+    "pro_rata_rights": "Pro-rata / follow-on investment rights",
+    "vesting": "Founder and/or employee vesting schedule"
   },
   "red_flags": [
-    {"flag": "Risk title", "detail": "Explanation of the risk and its severity"}
+    {"flag": "Concerning clause title", "detail": "Why this clause is problematic, its real-world impact on founders, and what is market standard instead", "severity": "high|medium|low"}
   ],
   "score": {
     "overall": 72,
     "breakdown": {
-      "market_opportunity": 80,
-      "feasibility": 65,
-      "differentiation": 70,
-      "timing": 75,
-      "team_fit": 70
+      "founder_friendliness": 70,
+      "valuation_fairness": 75,
+      "control_terms": 65,
+      "liquidity_terms": 80,
+      "standard_terms": 70
     },
-    "verdict": "One-sentence overall verdict"
+    "verdict": "One-sentence overall verdict on these terms from a founder's perspective"
   },
-  "next_steps": [
-    {"step": "Action title", "detail": "Specific actionable advice"}
+  "recommendations": [
+    {"action": "Specific negotiation ask", "detail": "What to push for, why it matters, and how likely investors are to agree"}
   ]
 }
 
-Scores are integers from 0-100. Be honest and critical — not every idea is great.
-Red flags should be real concerns, not generic risks. Next steps should be specific and actionable."""
+Scores are integers 0-100 where 100 is maximally founder-friendly.
+Be specific — reference actual numbers and clauses from the document.
+If a field is not addressed in the term sheet, write "Not specified" for that key term.
+Red flags should cite real clauses with concrete impact, not generic risks.
+Recommendations should be prioritized, actionable negotiation points."""
 
 
 @app.route("/")
@@ -65,13 +73,13 @@ def index():
 @limiter.limit("10 per minute")
 def analyze():
     data = request.get_json()
-    idea = data.get("idea", "").strip()
+    termsheet = data.get("termsheet", "").strip()
 
-    if not idea:
-        return {"error": "No idea provided"}, 400
+    if not termsheet:
+        return {"error": "No term sheet provided"}, 400
 
-    if len(idea) > 5000:
-        return {"error": "Idea is too long. Please keep it under 5000 characters."}, 400
+    if len(termsheet) > 20000:
+        return {"error": "Term sheet is too long. Please keep it under 20,000 characters."}, 400
 
     def generate():
         full_response = ""
@@ -84,15 +92,13 @@ def analyze():
                 messages=[
                     {
                         "role": "user",
-                        "content": f"Analyze this startup idea:\n\n{idea}",
+                        "content": f"Analyze this term sheet:\n\n{termsheet}",
                     }
                 ],
             ) as stream:
                 for text in stream.text_stream:
                     full_response += text
 
-            # Parse and return the JSON result
-            # Extract JSON from response (handle markdown code blocks)
             json_str = full_response.strip()
             if json_str.startswith("```"):
                 json_str = json_str.split("```")[1]

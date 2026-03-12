@@ -7,12 +7,13 @@
 
 ## Project Description and Goals
 
-**BuildFast** is an AI-powered startup idea analyzer. Users submit a startup idea in plain text and receive a structured, expert-level analysis covering market opportunity, competitive landscape, risks, scoring, and actionable next steps.
+**TermSight** is an AI-powered term sheet analyzer. Users paste an investment term sheet (Series A equity, SAFE, convertible note, etc.) and receive a structured, plain-English analysis covering key terms, red flags, a founder-friendliness score, and prioritized negotiation recommendations.
 
 **Goals:**
-- Help founders and builders quickly validate or stress-test startup ideas
-- Provide honest, critical analysis (not generic encouragement)
-- Deliver results in a structured, readable format via a clean web UI
+- Help founders understand term sheets without needing a lawyer for every clause
+- Flag genuinely problematic terms (not generic risk warnings)
+- Score founder-friendliness across five dimensions and explain what to push back on
+- Deliver results in a clean, tabbed UI with visual score breakdowns
 
 ---
 
@@ -20,22 +21,20 @@
 
 - Flask backend with a single `/analyze` POST endpoint
 - Streaming SSE response from the Claude API (`claude-opus-4-6`)
-- Structured JSON analysis returned: summary, market, red flags, score breakdown, next steps
-- System prompt engineered to enforce consistent JSON output and critical analysis tone
-- Frontend template (`index.html`) scaffolded
-- CORS enabled for local dev
-- Environment-based API key loading via `python-dotenv`
+- Structured JSON returned: summary, key_terms, red_flags (with severity), score breakdown, recommendations
+- System prompt engineered for VC/legal expertise and consistent JSON output
+- Rate limiting: 10 requests/minute per IP via `flask-limiter`
+- Input validation: rejects empty or oversized (>20,000 char) submissions
+- Full frontend UI with score circle, score bars, tabbed results (Summary, Key Terms, Red Flags, Negotiate)
+- Three built-in example term sheets (Series A, SAFE, convertible note)
+- 7-test pytest suite covering all major success and error paths
 
 ---
 
 ## What's Left To Do
 
-- Build out the `index.html` frontend UI (form input, results rendering, score visualizations)
-- Handle streaming progress states in the UI (loading, thinking, done)
-- Add input validation and user-friendly error messages on the frontend
-- Style the results: score breakdown, red flags list, next steps cards
-- Add tests for the `/analyze` endpoint
-- Consider rate limiting and abuse prevention before any public deployment
+- PDF/file upload support (founders often receive term sheets as PDFs)
+- Consider additional rate limiting and abuse prevention before any public deployment
 
 ---
 
