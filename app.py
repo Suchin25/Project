@@ -2,6 +2,8 @@ import os
 import json
 from flask import Flask, render_template, request, Response, stream_with_context
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import anthropic
 from dotenv import load_dotenv
 
@@ -9,6 +11,13 @@ load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=[],
+    storage_uri="memory://",
+)
 
 client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
@@ -53,12 +62,16 @@ def index():
 
 
 @app.route("/analyze", methods=["POST"])
+@limiter.limit("10 per minute")
 def analyze():
     data = request.get_json()
     idea = data.get("idea", "").strip()
 
     if not idea:
         return {"error": "No idea provided"}, 400
+
+    if len(idea) > 5000:
+        return {"error": "Idea is too long. Please keep it under 5000 characters."}, 400
 
     def generate():
         full_response = ""

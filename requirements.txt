@@ -1,4 +1,6 @@
 anthropic
 flask
 flask-cors
+flask-limiter
 python-dotenv
+pytest
